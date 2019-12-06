@@ -1,0 +1,53 @@
+version: "3"
+services:
+  app:
+    build: .
+    command: python -m flask run --host 0.0.0.0 --port 5000
+    environment:
+      - FLASK_APP=serve.py
+      - FLASK_ENV=development
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/var/www/flask-bones
+  worker:
+    build: .
+    command: python -m flask rq worker
+    environment:
+      - FLASK_APP=serve.py
+    volumes:
+      - .:/var/www/flask-bones
+  mail:
+    image: "mailhog/mailhog"
+    ports:
+      - "8025:8025"
+  memcached:
+    image: "memcached:alpine"
+  postgres:
+    image: "postgres:alpine"
+    ports:
+      - "5432:5432"
+  redis:
+    image: "redis:alpine"
+  mqtt:
+    image: ansi/mosquitto
+    container_name: mosquitto
+    ports:
+      - 1883:1883
+      - "9001:9001"
+    expose:
+      - "1883"
+      - "9001"
+
+    entrypoint: /usr/local/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf
+    volumes:
+      - ./etc/mosquitto:/etc/mosquitto:ro
+      - ./var/log/mosquitto:/var/log/mosquitto:rw
+    networks:
+      - default
+
+  app_mqtt:
+    build: .
+    command: python mqtt.py
+    volumes:
+      - .:/var/www/flask-bones
